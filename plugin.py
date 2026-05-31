@@ -285,9 +285,24 @@ class BasePlugin:
                     j = json.loads(strData)
 
                     Domoticz.Status(str(j))
-                    v = 10
-                    
-                    UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': str(v)})
+
+                    n = len(j)
+                    for v in j:
+                        n -= 1
+                        index = int(v['index']['litre'])
+                        date = v['date_releve']
+                        comsumption = int(v['consommation']['litre'])
+
+                        if n == 0:
+                            Domoticz.Status("Last value > " + str(date) + " " + str(index))
+
+                            #Update dashboard
+                            data = str(index) + ";" + str(comsumption)
+                            UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': data})
+
+                            #Update logs
+                            data = data + ";" + str(date)
+                            UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': data})
 
                 except:
                     Domoticz.Error("Can't retreive value from Veolia site")
@@ -480,9 +495,9 @@ def CreateDevice(IEEE, devicetype):
 
     if devicetype == WATER_COUNTER:
         kwarg['Type'] = 243
-        kwarg['Subtype'] = 28
+        kwarg['Subtype'] = 33
         kwarg['Switchtype'] = 2
-        kwarg['Image'] = 11
+        #kwarg['Image'] = 11
 
     kwarg['DeviceID'] = IEEE
     kwarg['Name'] = Name
