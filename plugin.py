@@ -9,9 +9,9 @@
     <params>
         <param field="Username" label="E-mail" width="140px" required="true" default="a.b@c.com"/>
         <param field="Password" label="Pasword" width="140px" required="true" default="1234567"/>
-        <param field="Mode1" label="Portal" width="150px">
+        <param field="Mode1" label="Mode" width="150px">
             <options>
-                <option label="eau.veolia.fr" value="0"  default="true" />
+                <option label="Normal" value="0"  default="true" />
                 <option label="RESET" value="1"/>
             </options>
         </param>
@@ -173,6 +173,7 @@ class BasePlugin:
                 Domoticz.Debug("GetAccount")
 
                 headers['Authorization'] = 'Bearer '  + self.Token
+                #headers['Cache-Control'] = "no-cache"
 
                 url = '/espace-client?type-front=' + FRONT
 
@@ -229,7 +230,7 @@ class BasePlugin:
 
     def onMessage(self, Connection, Data):
         Domoticz.Log("onMessage called for connection: " + Connection.Name)
-        Domoticz.Status(Data)
+        Domoticz.Log(Data)
         strData = Data["Data"].decode("utf-8", "ignore")
         Status = int(Data["Status"])
 
@@ -285,6 +286,7 @@ class BasePlugin:
                     j = json.loads(strData)
 
                     Domoticz.Status(str(j))
+                    Domoticz.Status("Got values")
 
                     n = len(j)
                     for v in j:
@@ -333,6 +335,7 @@ class BasePlugin:
             dtNow = datetime.now()
             if dtNow > self.dtNextRefresh:
                 self.dtNextRefresh = setRefreshTime(dtNow)
+                Domoticz.Status("Next Update : " + str(self.dtNextRefresh))
                 self.UpdateValue()
 
     def onCommand(self, DeviceID, Unit, Command, Level, Hue):
@@ -362,18 +365,20 @@ class BasePlugin:
         return
 
     def UpdateAccount(self):
-        if not self.id_abonnement or not self.id_tiers or not self.id_contact or not self.id_compteur:
+        if True:#not self.id_abonnement or not self.id_tiers or not self.id_contact or not self.id_compteur:
             Domoticz.Status("Update account data")
             self.Request("GetAccount", BACKEND_ISTEFR)
         else:
+            Domoticz.Status("Account data in date")
             self.NextRequest = BILLING
         return
 
     def UpdateFacturation(self):
-        if not self.id_numeroPDS or not self.id_debut_abonnement:
+        if True:#not self.id_numeroPDS or not self.id_debut_abonnement:
             Domoticz.Status("Update billing data")
             self.Request("GetFacturation", BACKEND_ISTEFR)
         else:
+            Domoticz.Status("Billing data in date")
             self.NextRequest = DATA
         return
 
