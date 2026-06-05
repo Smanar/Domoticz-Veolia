@@ -295,14 +295,16 @@ class BasePlugin:
                         date = v['date_releve']
                         comsumption = int(v['consommation']['litre'])
 
-                        if n == 0:
-                            Domoticz.Status("Last value > " + str(date) + " " + str(index))
+                        if n < 3:
 
-                            #Update dashboard
                             data = str(index) + ";" + str(comsumption)
-                            UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': data})
 
-                            #Update logs
+                            #Update dashboard but only if there is a change with the last value
+                            if n == 0:
+                                Domoticz.Status("Last value > " + str(date) + " " + str(index))
+                                UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': data})
+
+                            #Update logs for 3 lasts values
                             data = data + ";" + str(date)
                             UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': data})
 
