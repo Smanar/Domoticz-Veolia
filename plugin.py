@@ -64,6 +64,7 @@ GlobalHeaders = { 'Content-Type': 'text/xml; charset=utf-8', \
 
 WATER_COUNTER = 1
 FRONT = 'WEB_ORDINATEUR'
+MAX_REQUEST = 2
 
 #STEP
 LOGIN = 1
@@ -87,7 +88,8 @@ class BasePlugin:
     id_numeroPDS = ""
     id_debut_abonnement = ""
     NextRequest = 0
-    MaxTry = 0
+    MaxRequest = 0
+    Flood = datetime.now()
 
     config = configparser.ConfigParser()
 
@@ -140,7 +142,6 @@ class BasePlugin:
             Domoticz.Debug("Connected successfully to: " + Connection.Address)
 
             sendData = None
-            self.MaxTry += 1
 
             headers = GlobalHeaders.copy()
             headers['Host'] = Connection.Address
@@ -198,7 +199,8 @@ class BasePlugin:
             elif Connection.Name == "Getvalue":
                 Domoticz.Debug("Getvalue")
 
-                current_date = date.today()
+                #On repars 3 jours en arriere
+                current_date = date.today() - timedelta(days=3)
                 current_year = current_date.year
                 current_month = current_date.month
 
@@ -243,7 +245,7 @@ class BasePlugin:
 
                     Domoticz.Status("Got Token")
 
-                    self.MaxTry = 0
+                    self.MaxRequest = 0
                     self.NextRequest = ACCOUNT
 
                 except:
@@ -260,7 +262,7 @@ class BasePlugin:
                     Domoticz.Status("Got acoount data")
                     self.SaveUserData()
 
-                    self.MaxTry = 0
+                    self.MaxRequest = 0
                     self.NextRequest = BILLING
 
                 except:
@@ -275,7 +277,7 @@ class BasePlugin:
                     Domoticz.Status("Got billing data")
                     self.SaveUserData()
 
-                    self.MaxTry = 0
+                    self.MaxRequest = 0
                     self.NextRequest = DATA
 
                 except:
@@ -332,13 +334,19 @@ class BasePlugin:
         elif self.NextRequest == BILLING:
             self.UpdateFacturation()
 
+        dtNow = datetime.now()
+
         #Normal poll
         if self.NextRequest == DATA:
-            dtNow = datetime.now()
             if dtNow > self.dtNextRefresh:
                 self.dtNextRefresh = setRefreshTime(dtNow)
                 Domoticz.Status("Next Update : " + str(self.dtNextRefresh))
                 self.UpdateValue()
+
+        #Anti flood
+        if self.MaxRequest > MAX_REQUEST and dtNow > self.Flood:
+            self.MaxRequest = 0
+            self.Flood = dtNow
 
     def onCommand(self, DeviceID, Unit, Command, Level, Hue):
         pass
@@ -348,8 +356,11 @@ class BasePlugin:
             CreateDevice(__IEEE, devicetype)
 
     def Request(self, name, address):
-        if  self.MaxTry > 1:
-            Domoticz.Error("Too much request")
+        self.MaxRequest += 1
+
+        if  self.MaxRequest >= MAX_REQUEST:
+            Domoticz.Error("Requests blocked for 1 hour, too much request for connection: " + name)
+            self.Flood = datetime.now() + timedelta(hours=1)
             return
         if self.httpServerConn and (self.httpServerConn.Connecting() or self.httpServerConn.Connected()):
             Domoticz.Error("Already connected")
