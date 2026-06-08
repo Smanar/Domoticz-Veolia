@@ -245,8 +245,8 @@ class BasePlugin:
 
                     Domoticz.Status("Got Token")
 
-                    self.MaxRequest = 0
                     self.NextRequest = ACCOUNT
+                    self.MaxRequest = 0
 
                 except:
                     Domoticz.Error("Can't login on Veolia site")
@@ -262,8 +262,8 @@ class BasePlugin:
                     Domoticz.Status("Got acoount data")
                     self.SaveUserData()
 
-                    self.MaxRequest = 0
                     self.NextRequest = BILLING
+                    self.MaxRequest = 0
 
                 except:
                     Domoticz.Error("Can't retreive account data from Veolia site")
@@ -277,8 +277,8 @@ class BasePlugin:
                     Domoticz.Status("Got billing data")
                     self.SaveUserData()
 
-                    self.MaxRequest = 0
                     self.NextRequest = DATA
+                    self.MaxRequest = 0
 
                 except:
                     Domoticz.Error("Can't retreive account data from Veolia site")
@@ -289,6 +289,12 @@ class BasePlugin:
 
                     Domoticz.Status(str(j))
                     Domoticz.Status("Got values")
+                    self.MaxRequest = 0
+
+                    #Program next update
+                    dtNow = datetime.now()
+                    self.dtNextRefresh = setRefreshTime(dtNow)
+                    Domoticz.Status("Next Update : " + str(self.dtNextRefresh))
 
                     n = len(j)
                     for v in j:
@@ -335,12 +341,12 @@ class BasePlugin:
             self.UpdateFacturation()
 
         dtNow = datetime.now()
+        
+        #Domoticz.Status(str(self.NextRequest) + " " + str(self.dtNextRefresh - dtNow))
 
         #Normal poll
         if self.NextRequest == DATA:
             if dtNow > self.dtNextRefresh:
-                self.dtNextRefresh = setRefreshTime(dtNow)
-                Domoticz.Status("Next Update : " + str(self.dtNextRefresh))
                 self.UpdateValue()
 
         #Anti flood
@@ -356,22 +362,25 @@ class BasePlugin:
             CreateDevice(__IEEE, devicetype)
 
     def Request(self, name, address):
-        self.MaxRequest += 1
+
+        if self.httpServerConn and (self.httpServerConn.Connecting() or self.httpServerConn.Connected()):
+            Domoticz.Error("Already connected")
+            return
 
         if  self.MaxRequest >= MAX_REQUEST:
             Domoticz.Error("Requests blocked for 1 hour, too much request for connection: " + name)
             self.Flood = datetime.now() + timedelta(hours=1)
             return
-        if self.httpServerConn and (self.httpServerConn.Connecting() or self.httpServerConn.Connected()):
-            Domoticz.Error("Already connected")
-            return
+
+        self.MaxRequest += 1
 
         self.httpServerConn = Domoticz.Connection(Name=name, Transport="TCP/IP", Protocol="HTTPS", Address=address, Port="443")
         self.httpServerConn.Connect()
+        return
 
     def UpdateLogin(self):
         if not self.Token:
-            Domoticz.Status("Update Token")
+            Domoticz.Status("Updating Token")
             self.Request("Login", LOGIN_URL)
         else:
             self.NextRequest = ACCOUNT
@@ -379,7 +388,7 @@ class BasePlugin:
 
     def UpdateAccount(self):
         if True:#not self.id_abonnement or not self.id_tiers or not self.id_contact or not self.id_compteur:
-            Domoticz.Status("Update account data")
+            Domoticz.Status("Updating account data")
             self.Request("GetAccount", BACKEND_ISTEFR)
         else:
             Domoticz.Status("Account data in date")
@@ -388,15 +397,15 @@ class BasePlugin:
 
     def UpdateFacturation(self):
         if True:#not self.id_numeroPDS or not self.id_debut_abonnement:
-            Domoticz.Status("Update billing data")
+            Domoticz.Status("Updating billing data")
             self.Request("GetFacturation", BACKEND_ISTEFR)
         else:
             Domoticz.Status("Billing data in date")
             self.NextRequest = DATA
         return
 
-    def UpdateValue(self):
-        Domoticz.Status("Update Veolia values")
+    def UpdateValue(self): 
+        Domoticz.Status("Updating Veolia values")
         self.Request("Getvalue", BACKEND_ISTEFR)
         return
 
