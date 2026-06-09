@@ -71,6 +71,7 @@ LOGIN = 1
 ACCOUNT = 2
 BILLING = 3
 DATA = 4
+WAITING = 5
 
 class BasePlugin:
 
@@ -295,6 +296,7 @@ class BasePlugin:
                     dtNow = datetime.now()
                     self.dtNextRefresh = setRefreshTime(dtNow)
                     Domoticz.Status("Next Update : " + str(self.dtNextRefresh))
+                    self.NextRequest = WAITING
 
                     n = len(j)
                     for v in j:
@@ -339,15 +341,18 @@ class BasePlugin:
             self.UpdateAccount()
         elif self.NextRequest == BILLING:
             self.UpdateFacturation()
+        elif self.NextRequest == DATA:
+            self.UpdateValue()
 
         dtNow = datetime.now()
-        
+
         #Domoticz.Status(str(self.NextRequest) + " " + str(self.dtNextRefresh - dtNow))
 
         #Normal poll
-        if self.NextRequest == DATA:
+        if self.NextRequest == WAITING:
             if dtNow > self.dtNextRefresh:
-                self.UpdateValue()
+                #Trigger a new complete phase
+                self.NextRequest = LOGIN
 
         #Anti flood
         if self.MaxRequest > MAX_REQUEST and dtNow > self.Flood:
@@ -379,7 +384,7 @@ class BasePlugin:
         return
 
     def UpdateLogin(self):
-        if not self.Token:
+        if True:#not self.Token:
             Domoticz.Status("Updating Token")
             self.Request("Login", LOGIN_URL)
         else:
