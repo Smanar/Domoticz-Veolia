@@ -232,8 +232,8 @@ class BasePlugin:
             Domoticz.Debug("Failed to connect ("+str(Status)+") to: "+Connection.Address+":"+Connection.Port+" with error: "+Description)
 
     def onMessage(self, Connection, Data):
-        Domoticz.Log("onMessage called for connection: " + Connection.Name)
-        Domoticz.Log(Data)
+        Domoticz.Debug("onMessage called for connection: " + Connection.Name)
+        Domoticz.Debug(Data)
         strData = Data["Data"].decode("utf-8", "ignore")
         Status = int(Data["Status"])
 
@@ -288,7 +288,7 @@ class BasePlugin:
                 try:
                     j = json.loads(strData)
 
-                    Domoticz.Status(str(j))
+                    #Domoticz.Status(str(j))
                     Domoticz.Status("Got values")
                     self.MaxRequest = 0
 
@@ -311,7 +311,7 @@ class BasePlugin:
 
                             #Update dashboard but only if there is a change with the last value
                             if n == 0:
-                                Domoticz.Status("Last value > " + str(date) + " " + str(index))
+                                Domoticz.Status("Last value used for widget > " + str(date) + " " + str(index))
                                 UpdateDevice("General", WATER_COUNTER,{'nValue': 0, 'sValue': data})
 
                             #Update logs for 3 lasts values
@@ -373,8 +373,9 @@ class BasePlugin:
             return
 
         if  self.MaxRequest >= MAX_REQUEST:
-            Domoticz.Error("Requests blocked for 1 hour, too much request for connection: " + name)
-            self.Flood = datetime.now() + timedelta(hours=1)
+            if datetime.now() > self.Flood:
+                Domoticz.Error("Requests blocked for 1 hour, too much request for connection: " + name)
+                self.Flood = datetime.now() + timedelta(hours=1)
             return
 
         self.MaxRequest += 1
@@ -472,27 +473,6 @@ def onCommand(DeviceID, Unit, Command, Level, Hue):
     _plugin.onCommand(DeviceID, Unit, Command, Level, Hue)
 
 # Generic helper functions
-def LogMessage(Message):
-    if Parameters["Mode6"] != "Normal":
-        Domoticz.Log(Message)
-    elif Parameters["Mode6"] != "Debug":
-        Domoticz.Debug(Message)
-    else:
-        f = open("http.html","w")
-        f.write(Message)
-        f.close()
-
-def DumpHTTPResponseToLog(httpDict):
-    if isinstance(httpDict, dict):
-        Domoticz.Log("HTTP Details ("+str(len(httpDict))+"):")
-        for x in httpDict:
-            if isinstance(httpDict[x], dict):
-                Domoticz.Log("--->'"+x+" ("+str(len(httpDict[x]))+"):")
-                for y in httpDict[x]:
-                    Domoticz.Log("------->'" + y + "':'" + str(httpDict[x][y]) + "'")
-            else:
-                Domoticz.Log("--->'" + x + "':'" + str(httpDict[x]) + "'")
-
 def UpdateDevice(IEEE, devicetype, kwarg):
 
     #Update the device
