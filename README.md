@@ -5,6 +5,8 @@
 This plugin works with a 3-day delay to be sure having data, because Veolia don't work in real time.
 The plugin retreive data for the complete month (less 3 day), so don't worry if you miss a day, it will be updated later.
 
+The Veolia website need to be "eau.veolia.fr"
+
 ## Installation.
 - With command line, go to your plugins directory (domoticz/plugins).   
 - Run:   
