@@ -5,10 +5,11 @@
 #
 #
 """
-<plugin key="Veolia" name="Veolia Plugin" author="Samanar" version="1.0.0">
+<plugin key="Veolia" name="Veolia Plugin" author="Samanar" version="2.0.0">
     <params>
         <param field="Username" label="E-mail" width="140px" required="true" default="a.b@c.com"/>
         <param field="Password" label="Pasword" width="140px" required="true" default="1234567"/>
+        <param field="Mode2" label="Update Time ?" width="140px" required="false" default=""/>
         <param field="Mode1" label="Mode" width="150px">
             <options>
                 <option label="Normal" value="0"  default="true" />
@@ -78,6 +79,7 @@ class BasePlugin:
     httpServerConn = None
     Mail = ''
     Pass = ''
+    TimeUpdate = None
     dtNextRefresh = 0
     Portal = 0
     Token = ''
@@ -106,6 +108,11 @@ class BasePlugin:
 
         self.Mail = Parameters["Username"]
         self.Pass = Parameters["Password"]
+        if Parameters["Mode2"]:
+            try:
+                self.TimeUpdate = prochain_moment(Parameters["Mode2"])
+            except:
+                Domoticz.Error("Error in Time update")
 
         if not self.Mail or not self.Pass:
             Domoticz.Error("Settings not completed")
@@ -293,8 +300,12 @@ class BasePlugin:
                     self.MaxRequest = 0
 
                     #Program next update
-                    dtNow = datetime.now()
-                    self.dtNextRefresh = setRefreshTime(dtNow)
+                    if self.TimeUpdate:
+                        self.dtNextRefresh = self.TimeUpdate
+                        self.TimeUpdate = None
+                    else:
+                        dtNow = datetime.now()
+                        self.dtNextRefresh = setRefreshTime(dtNow)
                     Domoticz.Status("Next Update : " + str(self.dtNextRefresh))
                     self.NextRequest = WAITING
 
@@ -523,3 +534,15 @@ def setRefreshTime(dtDate=None):
     if dtDate is None:
         dtDate = datetime.now()
     return dtDate + timedelta(days=1)
+
+def prochain_moment(heure_str) :
+
+    heure, minute = map(int, heure_str.split(":"))
+
+    maintenant = datetime.now()
+    candidat = maintenant.replace(hour=heure, minute=minute, second=0, microsecond=0)
+
+    if candidat <= maintenant:
+        candidat += timedelta(days=1)
+
+    return candidat
